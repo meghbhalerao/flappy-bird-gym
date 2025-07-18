@@ -98,15 +98,15 @@ def load_images(convert: bool = True,
 
         # Game over sprite:
         images["gameover"] = _load_sprite("gameover.png",
-                                          convert=convert, alpha=True)
+                                            convert=convert, alpha=True)
 
         # Welcome screen message sprite:
         images["message"] = _load_sprite("message.png",
-                                         convert=convert, alpha=True)
+                                            convert=convert, alpha=True)
 
         # Sprite for the base (ground):
         images["base"] = _load_sprite("base.png",
-                                      convert=convert, alpha=True)
+                                        convert=convert, alpha=True)
 
         # Background sprite:
         if bg_type is None:
@@ -118,18 +118,18 @@ def load_images(convert: bool = True,
         # Bird sprites:
         images["player"] = (
             _load_sprite(f"{bird_color}bird-upflap.png",
-                         convert=convert, alpha=True),
+                            convert=convert, alpha=True),
             _load_sprite(f"{bird_color}bird-midflap.png",
-                         convert=convert, alpha=True),
+                            convert=convert, alpha=True),
             _load_sprite(f"{bird_color}bird-downflap.png",
-                         convert=convert, alpha=True),
+                            convert=convert, alpha=True),
         )
 
         # Pipe sprites:
         pipe_sprite = _load_sprite(f"pipe-{pipe_color}.png",
-                                   convert=convert, alpha=True)
+                                    convert=convert, alpha=True)
         images["pipe"] = (img_flip(pipe_sprite, False, True),
-                          pipe_sprite)
+                            pipe_sprite)
     except FileNotFoundError as ex:
         raise FileNotFoundError("Can't find the sprites folder! No such file or"
                                 f" directory: {SPRITES_PATH}") from ex

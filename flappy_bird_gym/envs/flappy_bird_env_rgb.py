@@ -26,7 +26,7 @@ RBG-arrays representing the game's screen as observations.
 
 from typing import Dict, Tuple, Optional, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 import pygame
 
@@ -71,10 +71,7 @@ class FlappyBirdEnvRGB(gym.Env):
         self._pipe_gap = pipe_gap
 
         self._game = None
-        self._renderer = FlappyBirdRenderer(screen_size=self._screen_size,
-                                            bird_color=bird_color,
-                                            pipe_color=pipe_color,
-                                            background=background)
+        self._renderer = FlappyBirdRenderer(screen_size=self._screen_size, bird_color=bird_color, pipe_color=pipe_color, background=background)
 
     def _get_observation(self):
         self._renderer.draw_surface(show_score=False)
@@ -83,8 +80,7 @@ class FlappyBirdEnvRGB(gym.Env):
     def reset(self):
         """ Resets the environment (starts a new game).
         """
-        self._game = FlappyBirdLogic(screen_size=self._screen_size,
-                                     pipe_gap_size=self._pipe_gap)
+        self._game = FlappyBirdLogic(screen_size=self._screen_size, pipe_gap_size=self._pipe_gap)
 
         self._renderer.game = self._game
         return self._get_observation()
