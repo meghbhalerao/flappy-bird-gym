@@ -153,7 +153,7 @@ def main(save_traj = False):
             traj_save_path = os.path.join(TRAJECTORY_DIR, f"trajectory_{num_games}.pkl")
             if not os.path.exists(TRAJECTORY_DIR):
                 os.makedirs(TRAJECTORY_DIR, exist_ok=True)
-            pickle.save(open(traj_save_path, "wb"), trajectory)
+            pickle.dump(trajectory, open(traj_save_path, "wb"))
             print(f"Trajectory saved at {traj_save_path}")
 
         show_game_over_screen(crash_info)
