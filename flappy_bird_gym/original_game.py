@@ -12,6 +12,8 @@ import sys
 import pygame
 from pygame.locals import *
 
+
+
 ASSETS_DIR = "./flappy_bird_gym/assets"
 
 FPS = 30
@@ -57,10 +59,15 @@ PIPES_LIST = (
     ASSETS_DIR + '/sprites/pipe-red.png',
 )
 
+ENABLE_SOUND = False
 
-def main():
+def main(save_traj = False):
     global SCREEN, FPSCLOCK
     pygame.init()
+
+    if ENABLE_SOUND:
+        pygame.mixer.init()
+
     FPSCLOCK = pygame.time.Clock()
     SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('Flappy Bird')
@@ -91,12 +98,15 @@ def main():
         soundExt = '.wav'
     else:
         soundExt = '.ogg'
+    
+    if ENABLE_SOUND:
+        SOUNDS['die'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/die' + soundExt)
+        SOUNDS['hit'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/hit' + soundExt)
+        SOUNDS['point'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/point' + soundExt)
+        SOUNDS['swoosh'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/swoosh' + soundExt)
+        SOUNDS['wing'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/wing' + soundExt)
 
-    SOUNDS['die'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/die' + soundExt)
-    SOUNDS['hit'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/hit' + soundExt)
-    SOUNDS['point'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/point' + soundExt)
-    SOUNDS['swoosh'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/swoosh' + soundExt)
-    SOUNDS['wing'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/wing' + soundExt)
+    trajectories = []
 
     while True:
         # select random background sprites
@@ -133,8 +143,14 @@ def main():
         )
 
         movement_info = show_welcome_animation()
-        crash_info = main_game(movement_info)
+        trajectory, crash_info = main_game(movement_info, save_traj)
+
+        if save_traj:
+            trajectories.append(trajectory)
         show_game_over_screen(crash_info)
+    print("Collected {} trajectories".format(len(trajectories)))
+
+
 
 
 def show_welcome_animation():
@@ -157,15 +173,15 @@ def show_welcome_animation():
 
     # player shm for up-down motion on welcome screen
     player_shm_vals = {'val': 0, 'dir': 1}
-
     while True:
         for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
                 sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_SPACE or event.key == pygame.K_UP):
                 # make first flap sound and return values for main_game
-                SOUNDS['wing'].play()
+                if ENABLE_SOUND:
+                    SOUNDS['wing'].play()
                 return {
                     'player_y': player_y + player_shm_vals['val'],
                     'base_x': base_x,
@@ -181,8 +197,7 @@ def show_welcome_animation():
 
         # draw sprites
         SCREEN.blit(IMAGES['background'], (0,0))
-        SCREEN.blit(IMAGES['player'][player_index],
-                    (player_x, player_y + player_shm_vals['val']))
+        SCREEN.blit(IMAGES['player'][player_index], (player_x, player_y + player_shm_vals['val']))
         SCREEN.blit(IMAGES['message'], (message_x, message_y))
         SCREEN.blit(IMAGES['base'], (base_x, BASE_Y))
 
@@ -190,7 +205,9 @@ def show_welcome_animation():
         FPSCLOCK.tick(FPS)
 
 
-def main_game(movement_info):
+def main_game(movement_info, save_traj):
+    # we will append to these lists in case we are going to save the trajectories
+
     score = player_index = loop_iter = 0
     player_index_gen = movement_info['player_index_gen']
     player_x, player_y = int(SCREEN_WIDTH * 0.2), movement_info['player_y']
@@ -226,32 +243,52 @@ def main_game(movement_info):
     player_rot_thr = 20   # rotation threshold
     player_flap_acc = -9   # players speed on flapping
     player_flapped = False  # True when player flaps
-
+    trajectory = {"image_obs": [], "game_states": [], "actions": []}
     while True:
+        action = 0  # default action is do nothing
         for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):    
                 pygame.quit()
                 sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_SPACE or event.key == pygame.K_UP):
+                action = 1
                 if player_y > -2 * IMAGES['player'][0].get_height():
                     player_vel_y = player_flap_acc
                     player_flapped = True
-                    SOUNDS['wing'].play()
+                    if ENABLE_SOUND:
+                        SOUNDS['wing'].play()
 
         # check for crash here
-        crash_test = check_crash({'x': player_x, 'y': player_y, 'index': player_index},
-                                 upper_pipes, lower_pipes)
+        crash_test = check_crash({'x': player_x, 'y': player_y, 'index': player_index}, upper_pipes, lower_pipes)
         if crash_test[0]:
-            return {
-                'y': player_y,
-                'groundCrash': crash_test[1],
-                'base_x': base_x,
-                'upper_pipes': upper_pipes,
-                'lower_pipes': lower_pipes,
-                'score': score,
-                'player_vel_y': player_vel_y,
-                'player_rot': player_rot
-            }
+            if save_traj:
+                # assertion that the lengths of observations, states, and actions is the same 
+                assert len(trajectory["image_obs"]) == len(trajectory["game_states"]) == len(trajectory["actions"]), "Lengths of trajectory components do not match, got {} image_obs, {} game_states, and {} actions.".format(
+                    len(trajectory["image_obs"]),
+                    len(trajectory["game_states"]),
+                    len(trajectory["actions"]))
+                
+                return trajectory, {
+                    'y': player_y,
+                    'groundCrash': crash_test[1],
+                    'base_x': base_x,
+                    'upper_pipes': upper_pipes,
+                    'lower_pipes': lower_pipes,
+                    'score': score,
+                    'player_vel_y': player_vel_y,
+                    'player_rot': player_rot
+                }
+            else:
+                return None, {
+                    'y': player_y,
+                    'groundCrash': crash_test[1],
+                    'base_x': base_x,
+                    'upper_pipes': upper_pipes,
+                    'lower_pipes': lower_pipes,
+                    'score': score,
+                    'player_vel_y': player_vel_y,
+                    'player_rot': player_rot
+                }
 
         # check for score
         player_mid_pos = player_x + IMAGES['player'][0].get_width() / 2
@@ -259,7 +296,8 @@ def main_game(movement_info):
             pipe_mid_pos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipe_mid_pos <= player_mid_pos < pipe_mid_pos + 4:
                 score += 1
-                SOUNDS['point'].play()
+                if ENABLE_SOUND:
+                    SOUNDS['point'].play()
 
         # player_index base_x change
         if (loop_iter + 1) % 3 == 0:
@@ -319,7 +357,24 @@ def main_game(movement_info):
         SCREEN.blit(player_surface, (player_x, player_y))
 
         pygame.display.update()
+        if save_traj:
+            # save the current screen as an image
+            trajectory["image_obs"].append(pygame.surfarray.array3d(pygame.display.get_surface()))
+            trajectory["game_states"].append({
+                'player_x': player_x,
+                'player_y': player_y,
+                'player_index': player_index,
+                'upper_pipes': upper_pipes,
+                'lower_pipes': lower_pipes,
+                'score': score,
+                'base_x': base_x,
+                'player_vel_y': player_vel_y,
+                'player_rot': player_rot
+            })
+            trajectory["actions"].append(action)
+            pygame.image.save(SCREEN, "screenshot.png")
         FPSCLOCK.tick(FPS)
+    
 
 
 def show_game_over_screen(crash_info):
@@ -338,16 +393,18 @@ def show_game_over_screen(crash_info):
     upper_pipes, lower_pipes = crash_info['upper_pipes'], crash_info['lower_pipes']
 
     # play hit and die sounds
-    SOUNDS['hit'].play()
+    if ENABLE_SOUND:
+        SOUNDS['hit'].play()
     if not crash_info['groundCrash']:
-        SOUNDS['die'].play()
+        if ENABLE_SOUND:
+            SOUNDS['die'].play()
 
     while True:
         for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):    
                 pygame.quit()
                 sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_SPACE or event.key == pygame.K_UP):
                 if player_y + player_height >= BASE_Y - 1:
                     return
 

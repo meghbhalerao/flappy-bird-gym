@@ -43,6 +43,12 @@ def _get_args():
         help="The execution mode for the game.",
     )
 
+    parser.add_argument(
+        "--save_traj", "-st",
+        action="store_true",
+        help="Whether to save the trajectory of the game or not."
+    )
+    
     return parser.parse_args()
 
 
@@ -74,9 +80,8 @@ def random_agent_env():
 
 def main():
     args = _get_args()
-
     if args.mode == "human":
-        flappy_bird_gym.original_game.main()
+        flappy_bird_gym.original_game.main(save_traj = args.save_traj)
     elif args.mode == "random":
         random_agent_env()
     else:
