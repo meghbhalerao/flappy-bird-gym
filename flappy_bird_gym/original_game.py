@@ -8,6 +8,8 @@ made on the code in order to improve readability.
 from itertools import cycle
 import random
 import sys
+import pickle
+import os
 
 import pygame
 from pygame.locals import *
@@ -15,6 +17,7 @@ from pygame.locals import *
 
 
 ASSETS_DIR = "./flappy_bird_gym/assets"
+TRAJECTORY_DIR = "./flappy_bird_gym/trajectories"
 
 FPS = 30
 SCREEN_WIDTH = 288
@@ -107,7 +110,7 @@ def main(save_traj = False):
         SOUNDS['wing'] = pygame.mixer.Sound(ASSETS_DIR + '/audio/wing' + soundExt)
 
     trajectories = []
-
+    num_games = 0
     while True:
         # select random background sprites
         randBg = random.randint(0, len(BACKGROUNDS_LIST) - 1)
@@ -146,9 +149,15 @@ def main(save_traj = False):
         trajectory, crash_info = main_game(movement_info, save_traj)
 
         if save_traj:
-            trajectories.append(trajectory)
+            #abcd
+            traj_save_path = os.path.join(TRAJECTORY_DIR, f"trajectory_{num_games}.pkl")
+            if not os.path.exists(TRAJECTORY_DIR):
+                os.makedirs(TRAJECTORY_DIR, exist_ok=True)
+            pickle.save(open(traj_save_path, "wb"), trajectory)
+            print(f"Trajectory saved at {traj_save_path}")
+
         show_game_over_screen(crash_info)
-    print("Collected {} trajectories".format(len(trajectories)))
+        num_games += 1
 
 
 
