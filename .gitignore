@@ -1,3 +1,11 @@
+# custom directories that we do not want to track on github: datasets, large files and so on
+trajectories/
+trajectory/
+data/
+dataset/
+datasets/
+wandb/
+outputs/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
