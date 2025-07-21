@@ -149,7 +149,6 @@ def main(save_traj = False):
         trajectory, crash_info = main_game(movement_info, save_traj)
 
         if save_traj:
-            #abcd
             traj_save_path = os.path.join(TRAJECTORY_DIR, f"trajectory_{num_games}.pkl")
             if not os.path.exists(TRAJECTORY_DIR):
                 os.makedirs(TRAJECTORY_DIR, exist_ok=True)
@@ -252,7 +251,7 @@ def main_game(movement_info, save_traj):
     player_rot_thr = 20   # rotation threshold
     player_flap_acc = -9   # players speed on flapping
     player_flapped = False  # True when player flaps
-    trajectory = {"image_obs": [], "game_states": [], "actions": []}
+    trajectory = {"image_obs": [], "game_states": [], "actions": [], "rewards": [], "final_score": 0}
     while True:
         action = 0  # default action is do nothing
         for event in pygame.event.get():
@@ -277,6 +276,8 @@ def main_game(movement_info, save_traj):
                     len(trajectory["game_states"]),
                     len(trajectory["actions"]))
                 
+                trajectory["final_score"] = score
+
                 return trajectory, {
                     'y': player_y,
                     'groundCrash': crash_test[1],
@@ -304,7 +305,8 @@ def main_game(movement_info, save_traj):
         for pipe in upper_pipes:
             pipe_mid_pos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
             if pipe_mid_pos <= player_mid_pos < pipe_mid_pos + 4:
-                score += 1
+                staged_reward = 1
+                score += staged_reward
                 if ENABLE_SOUND:
                     SOUNDS['point'].play()
 
@@ -381,7 +383,7 @@ def main_game(movement_info, save_traj):
                 'player_rot': player_rot
             })
             trajectory["actions"].append(action)
-            pygame.image.save(SCREEN, "screenshot.png")
+            trajectory["rewards"].append(staged_reward)  
         FPSCLOCK.tick(FPS)
     
 
