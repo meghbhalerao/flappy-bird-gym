@@ -153,7 +153,8 @@ def main(save_traj = False):
             if not os.path.exists(TRAJECTORY_DIR):
                 os.makedirs(TRAJECTORY_DIR, exist_ok=True)
             pickle.dump(trajectory, open(traj_save_path, "wb"))
-            print(f"Trajectory saved at {traj_save_path}")
+            
+            print(f"Trajectory saved at {traj_save_path}, length of trajectory: {len(trajectory['image_obs'])}")
 
         show_game_over_screen(crash_info)
         num_games += 1
@@ -254,6 +255,7 @@ def main_game(movement_info, save_traj):
     trajectory = {"image_obs": [], "game_states": [], "actions": [], "rewards": [], "final_score": 0}
     while True:
         action = 0  # default action is do nothing
+        staged_reward = 0 # default value of staged reward for each timestep
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):    
                 pygame.quit()
@@ -271,7 +273,20 @@ def main_game(movement_info, save_traj):
         if crash_test[0]:
             if save_traj:
                 # assertion that the lengths of observations, states, and actions is the same 
-                assert len(trajectory["image_obs"]) == len(trajectory["game_states"]) == len(trajectory["actions"]), "Lengths of trajectory components do not match, got {} image_obs, {} game_states, and {} actions.".format(
+                #abcd
+                trajectory["image_obs"].append(pygame.surfarray.array3d(pygame.display.get_surface()))
+                trajectory["game_states"].append({
+                'player_x': player_x,
+                'player_y': player_y,
+                'player_index': player_index,
+                'upper_pipes': upper_pipes,
+                'lower_pipes': lower_pipes,
+                'score': score,
+                'base_x': base_x,
+                'player_vel_y': player_vel_y,
+                'player_rot': player_rot
+            })
+                assert len(trajectory["image_obs"]) == len(trajectory["game_states"]) == len(trajectory["actions"]) + 1, "Lengths of trajectory components not as expected, got {} image_obs, {} game_states, and {} actions. Need len(states) == len(image_obs) == len(actions) + 1".format(
                     len(trajectory["image_obs"]),
                     len(trajectory["game_states"]),
                     len(trajectory["actions"]))
